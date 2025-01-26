@@ -1,0 +1,11 @@
+{
+    "package": "GPT-Grammar",
+    "name": "GPT Grammar",
+    "mod": 1684949320,
+    "min_point_version": 45,
+    "max_point_version": 54,
+    "branch_index": 0,
+    "config": {
+        "api_key": ""
+    }
+}
