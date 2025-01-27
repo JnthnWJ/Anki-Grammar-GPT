@@ -12,17 +12,22 @@ import glob
 
 print("DEBUG: __init__.py starting")
 
+# Use Anki's get_config to retrieve addon config
+def get_config():
+    """Retrieves the configuration from Anki's managed config."""
+    config = aqt.mw.addonManager.getConfig(__name__)
+    print(f"DEBUG: config from Anki: {config}")
+    return config
+
 def get_api_key():
     """Retrieves the API key from the config file."""
-    config_path = os.path.join(os.path.dirname(__file__), "config.json")
-    print(f"DEBUG: config_path is: {config_path}")
-    try:
-        with open(config_path, "r") as f:
-            config = json.load(f)
-            return config.get("api_key", "")
-    except FileNotFoundError:
-        print("DEBUG: config.json not found")
-        return ""
+    config = get_config()
+    return config.get("api_key", "")
+
+def get_model():
+    """Retrieves the model from the config file."""
+    config = get_config()
+    return config.get("model", "gpt-4o")  # Default to gpt-4o if not specified
 
 def remove_html_tags(text):
     """Removes HTML tags from a string."""
@@ -32,7 +37,9 @@ def remove_html_tags(text):
 def check_grammar(fields):
     """Sends the card content to the OpenAI API for grammar checking."""
     api_key = get_api_key()
+    model = get_model()
     print(f"DEBUG: Got API key: {api_key}")
+    print(f"DEBUG: Using model: {model}")
     if not api_key:
         showInfo("Please set your OpenAI API key in the add-on config.")
         return None
@@ -85,7 +92,7 @@ def check_grammar(fields):
 
     try:
         response = openai.chat.completions.create(
-            model="gpt-4o-mini-2024-07-18",
+            model=model,
             messages=messages,
             response_format=response_format
         )
