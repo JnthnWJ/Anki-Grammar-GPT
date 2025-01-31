@@ -125,10 +125,14 @@ def on_grammar_check(editor: Editor):
     # Get field names from the note
     field_names = note.keys()
 
-    # Store original content before making changes
-    original_content = json.dumps({field_name: note[field_name] for field_name in field_names})
-    note["OriginalContent"] = original_content
-    editor.loadNote()
+    # Check if the OriginalContent field exists
+    original_content_field_present = "OriginalContent" in field_names
+
+    if original_content_field_present:
+        # Store original content before making changes
+        original_content = json.dumps({field_name: note[field_name] for field_name in field_names})
+        note["OriginalContent"] = original_content
+        editor.loadNote()
 
     fields = {field_name: note[field_name] for field_name in field_names}
 
@@ -140,7 +144,12 @@ def on_grammar_check(editor: Editor):
                 editor.note[field_name] = corrected_value
 
         editor.loadNote()
-        tooltip("Grammar checked and fields updated.")
+
+        # Modify the tooltip based on OriginalContent field presence
+        if original_content_field_present:
+            tooltip("Grammar checked and fields updated.")
+        else:
+            tooltip("Undo not avalible for this card. Grammar checked and fields updated.")
 
 def on_undo(editor: Editor):
     """Restores the original content from the OriginalContent field."""
