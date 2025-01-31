@@ -49,7 +49,7 @@ def check_grammar(fields):
     # Create a schema based on the fields
     fields_schema = {
         field_name: {"type": "string", "description": f"Corrected text for field: {field_name}"}
-        for field_name in fields
+        for field_name in fields if field_name != "OriginalContent"
     }
 
     json_schema = {
@@ -86,7 +86,7 @@ def check_grammar(fields):
             "role": "user",
             "content": "Correct the following text and return a JSON object containing the corrected fields based on this schema:\n" +
                        f"{json.dumps(json_schema, indent=2)}\n\n" +
-                       "\n".join(f"{field}: {fields[field]}" for field, value in fields.items())
+                       "\n".join(f"{field}: {fields[field]}" for field, value in fields.items() if field != "OriginalContent")
         }
     ]
 
@@ -125,6 +125,11 @@ def on_grammar_check(editor: Editor):
     # Get field names from the note
     field_names = note.keys()
 
+    # Store original content before making changes
+    original_content = json.dumps({field_name: note[field_name] for field_name in field_names})
+    note["OriginalContent"] = original_content
+    editor.loadNote()
+
     fields = {field_name: note[field_name] for field_name in field_names}
 
     corrected_fields = check_grammar(fields)
@@ -137,6 +142,28 @@ def on_grammar_check(editor: Editor):
         editor.loadNote()
         tooltip("Grammar checked and fields updated.")
 
+def on_undo(editor: Editor):
+    """Restores the original content from the OriginalContent field."""
+    note = editor.note
+    if not note:
+        return
+
+    if "OriginalContent" in note:
+        try:
+            original_content = json.loads(note["OriginalContent"])
+            for field_name, original_value in original_content.items():
+                if field_name != "OriginalContent":
+                    note[field_name] = original_value
+
+            # Clear the OriginalContent field after restoring
+            note["OriginalContent"] = ""
+            editor.loadNote()
+            tooltip("Changes undone.")
+        except json.JSONDecodeError:
+            showInfo("Error decoding original content.")
+    else:
+        tooltip("No changes to undo.")
+
 def add_grammar_check_button(buttons, editor: Editor, *args, **kwargs):
    """Adds a button to the editor for triggering the grammar check."""
    icon_path = os.path.join(os.path.dirname(__file__), "icon.png")
@@ -148,6 +175,18 @@ def add_grammar_check_button(buttons, editor: Editor, *args, **kwargs):
        keys="Ctrl+Shift+G"
    )
    buttons.append(button)
+
+def add_undo_button(buttons, editor: Editor, *args, **kwargs):
+    """Adds an undo button to the editor."""
+    icon_path = os.path.join(os.path.dirname(__file__), "undo_icon.png")  # Path to your icon
+    button = editor.addButton(
+        icon_path,
+        "undo",
+        lambda ed=editor: on_undo(ed),
+        tip="Undo Changes (Ctrl+Z)",
+        keys="Ctrl+Z"
+    )
+    buttons.append(button)
 
 def get_venv_site_packages_path(venv_path):
     """
@@ -208,3 +247,4 @@ except ImportError as e:
 
 # Call add_grammar_check_button when the editor is initialized
 gui_hooks.editor_did_init_buttons.append(add_grammar_check_button)
+gui_hooks.editor_did_init_buttons.append(add_undo_button)
